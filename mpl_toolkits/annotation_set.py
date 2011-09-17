@@ -1,9 +1,9 @@
 """
 This module provides a way annotate multiple points. Annotating texts
 are drawn along a single (vertical or horizontal) line. And the offset
-between texts are auto adjusted so that they do not overwrap.
+between texts are automatically adjusted so that they do not overwrap.
 
-Running this command is similar to *annotate*. For example,
+Running this command is similar to *annotate*. For example,:
 
     s_list = ["label1", "label2", "label3"]
     xy_list = [(0, 0), (1, 2), (2, 1)]
@@ -19,10 +19,11 @@ Running this command is similar to *annotate*. For example,
 Here, s_list is a list of labels and the xy_list is a list of xy
 positions to be annotated. *xycoords* has same meaning as in the
 *annotate* and it aplies to position in *xy_list*. The *direction*
-argument specifies the direction of annotated texts. *refpos* and
-*refcoord* is position and coordinate for annotating texts. Unlike
-*annotate*, you must specify a single value for the position. For
-direction of "top" and "bottom", the *refpos* means y-position of
+argument specifies the direction of annotated texts ("top",
+"bottom", "left", or "right"). *refpos* and *refcoord* is
+position and coordinate for annotating
+texts. Unlike *annotate*, you must specify a single value for the
+position. For direction of"top" and "bottom", the *refpos* means y-position of
 annoatating texts and x-positions are automatically determined. For
 direction of "left" and "right", the *refpos* means x-position of
 texts and y-positions are automatically adjusted.
@@ -45,7 +46,7 @@ def get_objective_constraints(x1, dx):
 
     # constraints
     constraints = [lambda x, n=i: x[n+1] - x[n] - .5*(dx[n] + dx[n+1]) for i in range(len(x1)-1)]
-    
+
     return objective, constraints
 
 
@@ -71,7 +72,7 @@ def test_optimize():
     clf()
     xx = rand(10)
     xx3 = optimize_spacing(xx, [0.05]*len(xx))
-    
+
     plot(xx, np.zeros_like(xx), "o")
     ylim(-0.1, 1.5)
 
@@ -101,10 +102,10 @@ class DefaultConnectionStyleFunc(object):
         connectionstyle = "arc"
         connectionstyle_attr = dict(angleA=angleA,angleB=angleB,
                                     armA=armA,armB=dy-armA-pad,rad=rad)
-        
+
         return connectionstyle, connectionstyle_attr
 
-    
+
 class AnnotationSet(Annotation):
 
     _default_values = dict(left=dict(INDX=0, ha="right", va="center",
@@ -135,7 +136,7 @@ class AnnotationSet(Annotation):
 
         self._direction = direction
         default_values=self._default_values[direction]
-        
+
         INDX = default_values["INDX"]
 
         if not ("va" in kwargs or "verticalalignment" in kwargs):
@@ -146,10 +147,10 @@ class AnnotationSet(Annotation):
 
         if not "rotation" in kwargs:
             kwargs["rotation"] = default_values["rot"]
-            
+
         if refcoord not in ["data", "axes fraction", "figure fraction"]:
             raise ValueError("")
-        
+
         self._s_list = s_list
         self._xy_list = xy_list
         self._pad = pad
@@ -173,7 +174,7 @@ class AnnotationSet(Annotation):
             arrowprops["relpos"] = default_values["relpos"]
 
         self._connection_style_func = connection_style_func
-            
+
         Annotation.__init__(self, "", (0,0),
                             xytext=xytext,
                             xycoords=xycoords,
@@ -188,7 +189,7 @@ class AnnotationSet(Annotation):
         textcoords[self._INDX] = refcoord
 
         self.textcoords = tuple(textcoords)
-        
+
 
     def get_widths_heights(self, renderer):
 
@@ -211,7 +212,7 @@ class AnnotationSet(Annotation):
 
         w_list, h_list = self.get_widths_heights(renderer)
         return max(w_list), max(h_list)
-    
+
 
     #@allow_rasterization
     def draw(self, renderer):
@@ -225,7 +226,7 @@ class AnnotationSet(Annotation):
 
         default_values=self._default_values[self._direction]
         angleA, angleB = default_values["angleAangleB"]
-        
+
         vis_list = []
         x_pix_list = []
         dy_pix_list = []
@@ -238,7 +239,7 @@ class AnnotationSet(Annotation):
             dy_pix_list.append(abs([self._x, self._y][self._INDX] - xy_pixel[self._INDX]))
             ###
             x_pix_list.append(xy_pixel[1-self._INDX])
-            
+
             if self._check_xy(renderer, xy_pixel):
                 vis_list.append(True)
             else:
@@ -252,7 +253,7 @@ class AnnotationSet(Annotation):
         pad = fontsize_in_pixel*self._pad
         wh_list = self.get_widths_heights(renderer)
         size_list = [s+pad for s in wh_list[1-self._INDX]]
-        
+
         x_pix_list_masked = np.array(x_pix_list)[vis_list]
         x_pix_list0_masked = optimize_spacing(x_pix_list_masked, size_list)
 
@@ -264,7 +265,7 @@ class AnnotationSet(Annotation):
 
             self.xy = (x, y)
             self.xytext[1-self._INDX] = x2
-                
+
             self.set_text(s)
             if self._connection_style_func:
                 cs, cs_attr = self._connection_style_func(fontsize_in_pixel,
@@ -274,11 +275,11 @@ class AnnotationSet(Annotation):
                 self.arrow_patch.set_connectionstyle(cs, **cs_attr)
                                                      # angleA=angleA,angleB=angleB,
                                                      # armA=20,armB=dy-20-rad*2,rad=rad)
-            
+
             super(AnnotationSet, self).draw(renderer)
 
         #for s, (x, y), x2, dy in self._loop_over(renderer):
-            
+
 
 def axes_annotation_set(ax, direction,
                         s_list, xy_list,
@@ -289,7 +290,7 @@ def axes_annotation_set(ax, direction,
                         annotation_clip=None,
                         pad=0.5,
                         **kwargs):
-    
+
     att = AnnotationSet(direction,
                         s_list, xy_list,
                         refpos,
@@ -316,7 +317,7 @@ class OffsetBy(object):
         self._ref_pos = ref_pos
         self._ref_transform = ref_transform
         self._unit = unit
-        
+
         #self.set_unit(unit)
 
     def __call__(self, renderer):
@@ -340,20 +341,20 @@ if __name__ == '__main__':
 
     import matplotlib.pyplot as plt
     import numpy as np
-    
+
     x = np.random.rand(10)
     y = np.random.rand(10)
     xy_list = zip(x, y)
-    
+
     s_list = ["$000%d$" % i for i in range(len(x))]
     s_list[3] = "a"
-    
+
 
     ax = plt.subplot(121)
     ax.plot(x, y, "o")
-    
+
     att = axes_annotation_set(ax, "top",
-                              s_list, xy_list, 
+                              s_list, xy_list,
                               xycoords='data',
                               refpos=1.3,
                               refcoord="data"
@@ -364,9 +365,9 @@ if __name__ == '__main__':
 
     ax = plt.subplot(122)
     ax.plot(x, y, "o")
-    
+
     att = axes_annotation_set(ax, "right",
-                              s_list, xy_list, 
+                              s_list, xy_list,
                               xycoords='data',
                               refpos=-1,
                               connection_style_func=DefaultConnectionStyleFunc(armA=8, rad=2)
@@ -374,8 +375,8 @@ if __name__ == '__main__':
 
     refcoord=OffsetBy((0.95, 0.95), ax.transAxes, att.get_max_width_height)
     att.set_refcoord(refcoord)
-    
+
     ax.set(xlim=(-0.5, 2.), ylim=(-0.5, 1.5))
 
     plt.show()
-    
+
