@@ -59,8 +59,7 @@ def optimize_spacing(x0, dx):
 
     objective, constraints = get_objective_constraints(x1, dx)
 
-    x1_optimized = fmin_cobyla(objective, x1, constraints, rhoend=1e-7,
-                               iprint=0)
+    x1_optimized = fmin_cobyla(objective, x1, constraints, rhoend=1e-7)
 
     x0_optimized = np.empty_like(x1_optimized)
     x0_optimized[sorted_index] = x1_optimized
@@ -69,21 +68,23 @@ def optimize_spacing(x0, dx):
 
 
 def test_optimize():
-    clf()
-    xx = rand(10)
+    import matplotlib.pyplot as plt
+    import numpy as np
+    plt.clf()
+    xx = np.random.rand(10)
     xx3 = optimize_spacing(xx, [0.05]*len(xx))
 
-    plot(xx, np.zeros_like(xx), "o")
-    ylim(-0.1, 1.5)
+    plt.plot(xx, np.zeros_like(xx), "o")
+    plt.ylim(-0.1, 1.5)
 
     for x1, x3 in zip(xx, xx3):
-        annotate(str(x1), (x1, 0), xytext=(x3, 1), xycoords='data',
-                 textcoords='data',
-                 rotation=90, ha="center", va="bottom",
-                 arrowprops=dict(arrowstyle="-",
-                                 relpos=(0.5, 0.),
-                                 #connectionstyle="arc3"))
-                                 connectionstyle="arc,angleA=270,angleB=90,armA=50,armB=50,rad=10"))
+        plt.annotate(str(x1), (x1, 0), xytext=(x3, 1), xycoords='data',
+                     textcoords='data',
+                     rotation=90, ha="center", va="bottom",
+                     arrowprops=dict(arrowstyle="-",
+                                     relpos=(0.5, 0.),
+                                     #connectionstyle="arc3"))
+                                     connectionstyle="arc,angleA=270,angleB=90,armA=50,armB=50,rad=10"))
 
 
 
@@ -188,7 +189,7 @@ class AnnotationSet(Annotation):
         textcoords = ["figure pixels", "figure pixels"]
         textcoords[self._INDX] = refcoord
 
-        self.textcoords = tuple(textcoords)
+        self.anncoords = tuple(textcoords)
 
 
     def get_widths_heights(self, renderer):
@@ -198,7 +199,9 @@ class AnnotationSet(Annotation):
         old_s = self.get_text()
         for s in self._s_list:
             self.set_text(s)
-            bbox = super(AnnotationSet, self).get_window_extent(renderer)
+            # get_window_extent returns a bbox including arrow
+            # bbox = super(AnnotationSet, self).get_window_extent(renderer)
+            bbox, info, descent = self._get_layout(renderer)
             x, y, w, h = bbox.bounds
             w_list.append(w)
             h_list.append(h)
@@ -234,13 +237,17 @@ class AnnotationSet(Annotation):
         for x,y in self._xy_list:
             self.xy = (x, y)
             xy_pixel = self._get_position_xy(renderer)
-            self._update_position_xytext(renderer, xy_pixel)
+            # self._update_position_xytext(renderer, xy_pixel)
+            self.update_positions(renderer)
             #xytext = self._x, self._y
-            dy_pix_list.append(abs([self._x, self._y][self._INDX] - xy_pixel[self._INDX]))
+            xy = self._get_xy_display()
+            # dy_pix_list.append(abs([self._x, self._y][self._INDX] - xy_pixel[self._INDX]))
+            dy_pix_list.append(abs(xy[self._INDX] - xy_pixel[self._INDX]))
+            # dy_pix_list.append(100)
             ###
             x_pix_list.append(xy_pixel[1-self._INDX])
 
-            if self._check_xy(renderer, xy_pixel):
+            if self._check_xy(renderer):
                 vis_list.append(True)
             else:
                 vis_list.append(False)
@@ -254,29 +261,33 @@ class AnnotationSet(Annotation):
         wh_list = self.get_widths_heights(renderer)
         size_list = [s+pad for s in wh_list[1-self._INDX]]
 
-        x_pix_list_masked = np.array(x_pix_list)[vis_list]
-        x_pix_list0_masked = optimize_spacing(x_pix_list_masked, size_list)
+        if len(vis_list):
+            x_pix_list_masked = np.array(x_pix_list)[vis_list]
+            x_pix_list0_masked = optimize_spacing(x_pix_list_masked, size_list)
 
+            for s, (x,y), x2, dy in zip(np.array(self._s_list)[vis_list],
+                                        np.array(self._xy_list)[vis_list],
+                                        x_pix_list0_masked,
+                                        np.array(dy_pix_list)[vis_list]):
 
-        for s, (x,y), x2, dy in zip(np.array(self._s_list)[vis_list],
-                                    np.array(self._xy_list)[vis_list],
-                                    x_pix_list0_masked,
-                                    np.array(dy_pix_list)[vis_list]):
+                self.xy = (x, y)
+                # self.xytext[1-self._INDX] = x2
+                # self.xytext[1-self._INDX] = x2
+                xytext = list(self.get_position()) # tuple to list
+                xytext[1-self._INDX] = x2
+                self.xyann = xytext
+                self.set_text(s)
 
-            self.xy = (x, y)
-            self.xytext[1-self._INDX] = x2
+                if self._connection_style_func:
+                    cs, cs_attr = self._connection_style_func(fontsize_in_pixel,
+                                                              angleA, angleB,
+                                                              dy)
 
-            self.set_text(s)
-            if self._connection_style_func:
-                cs, cs_attr = self._connection_style_func(fontsize_in_pixel,
-                                                          angleA, angleB,
-                                                          dy)
+                    self.arrow_patch.set_connectionstyle(cs, **cs_attr)
+                                                         # angleA=angleA,angleB=angleB,
+                                                         # armA=20,armB=dy-20-rad*2,rad=rad)
 
-                self.arrow_patch.set_connectionstyle(cs, **cs_attr)
-                                                     # angleA=angleA,angleB=angleB,
-                                                     # armA=20,armB=dy-20-rad*2,rad=rad)
-
-            super(AnnotationSet, self).draw(renderer)
+                super().draw(renderer)
 
         #for s, (x, y), x2, dy in self._loop_over(renderer):
 
@@ -303,8 +314,10 @@ def axes_annotation_set(ax, direction,
 
     att.set_transform(mtransforms.IdentityTransform())
 
+    att.set_clip_on(False)
     ax._set_artist_props(att)
-    ax.artists.append(att)
+    # ax.artists.append(att)
+    ax.add_artist(att)
 
     return att
 

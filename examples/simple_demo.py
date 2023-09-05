@@ -1,5 +1,5 @@
 
-from mpl_toolkits.annotation_set import axes_annotation_set, DefaultConnectionStyleFunc, OffsetBy
+from mpl_annotation_set.annotation_set import axes_annotation_set, DefaultConnectionStyleFunc, OffsetBy
 
 
 if 1:
@@ -9,7 +9,7 @@ if 1:
     
     x = np.random.rand(10)
     y = np.random.rand(10)
-    xy_list = zip(x, y)
+    xy_list = np.vstack([x, y]).T # zip(x, y)
     
     s_list = ["$000%d$" % i for i in range(len(x))]
     s_list[3] = "a"
@@ -35,6 +35,7 @@ if 1:
                               s_list, xy_list, 
                               xycoords='data',
                               refpos=-1,
+                              # refcoord="axes fraction",
                               connection_style_func=DefaultConnectionStyleFunc(armA=8, rad=2)
                               )
 
